@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
+import sys, os
 import configparser
-import os
 import glob
 
 #Config
 config = configparser.ConfigParser()
 config.read("/scripts/config.ini")
+
+sys.path.append(config['projectinfo']['projectPath'])
+import card.cardcontroller as cardcontroller
 
 allImportantPaths = [
     config['projectinfo']['logPath'],
@@ -21,3 +24,6 @@ for path in allImportantPaths:
 files = glob.glob(config['projectinfo']['logPath']+"*")
 for file in files:
     os.remove(file)
+
+# Start application
+cardcontroller.startListening()

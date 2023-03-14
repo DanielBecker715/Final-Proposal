@@ -1,4 +1,3 @@
-import netmiko
 from netmiko import ConnectHandler
 import configparser
 import logging
@@ -23,7 +22,6 @@ device = {
 #Establish connection
 connection =ConnectHandler(**device)
 connection.enable()
-
 
 #
 # Data processing
@@ -52,4 +50,34 @@ def enableSinglePort(port):
     ]
     response = connection.send_config_set(config_commands)
 
-disableSinglePort(1)
+
+def enableAllPorts():
+    print("Waiting for port activation")
+    
+    cur = conn.cursor()
+    cur.execute(""" SELECT portname FROM network_switch """)
+
+    f = cur.fetchall()
+    for interface in f:        
+        config_commands = [
+            "interface " + interface[0], 
+            "no shutdown"
+        ]
+        connection.send_config_set(config_commands)
+    print("Enabled all ports")
+
+def disableAllUnsedPorts():
+    print("Waiting for port deactivation")
+    
+    cur = conn.cursor()
+    cur.execute(""" SELECT portname, status FROM network_switch """)
+
+    f = cur.fetchall()
+    for interface in f:
+        if (interface[1] != 1):
+            config_commands = [
+                "interface " + interface[0], 
+                "shutdown"
+            ]
+            connection.send_config_set(config_commands)
+    print("Disabled all unused ports")
