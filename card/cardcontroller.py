@@ -1,22 +1,19 @@
 #!/usr/bin/env python3
-import sys, os
-import time
-import sqlite3
-import configparser
+import os, configparser, time, sqlite3
+from mfrc522 import SimpleMFRC522
+import RPi.GPIO as GPIO
+import switch.switchcontroller as switch
 
 #Config
 config = configparser.ConfigParser()
-config.read("/scripts/config.ini")
+config.read(os.path.join(os.path.dirname(__file__), '..', 'config.ini'))
 
-import switch.cisco_communication as switch
 
 #Setup arduino card
-from mfrc522 import SimpleMFRC522
 reader = SimpleMFRC522()
 triggerPIN = 4
 
 #Setup arduino buzzer
-import RPi.GPIO as GPIO
 GPIO.cleanup() # cleanup all GPIO 
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
@@ -24,29 +21,30 @@ GPIO.setup(triggerPIN,GPIO.OUT)
 
 
 def PlayAccessGranted():
-    buzzer = GPIO.PWM(triggerPIN, 6000) # Set sound frequency to 2 Khz
+    buzzer = GPIO.PWM(triggerPIN, 4000) # Set sound frequency to 2 Khz
     buzzer.start(10) # Set dutycycle to 10
+    time.sleep(.2)
+    buzzer.ChangeFrequency(6000)
     time.sleep(.2)
 
 def PlayAccessDenied():
     buzzer = GPIO.PWM(triggerPIN, 6000) # Set sound frequency to 2 Khz
     buzzer.start(10) # Set dutycycle to 10
     time.sleep(.2)
-    buzzer.ChangeFrequency(400)
+    buzzer.ChangeFrequency(350)
     time.sleep(.2)
 
         
-conn = sqlite3.connect(config['projectinfo']['databasePath']+config['projectinfo']['databaseFileName'])
-print ("Searching for signal")
 
 def getCardPermission(cardid):
+    conn = sqlite3.connect(config['projectinfo']['databasePath']+config['projectinfo']['databaseFileName'])
     cur = conn.cursor()
     
     cur.execute(""" SELECT cardid, firstname FROM users WHERE `cardid` = ? """, (cardid,))
     rows = cur.fetchall()
 
     cur.execute('''INSERT INTO card_logs (cardid,time) VALUES(?,?)''', (cardid,"d"))
-
+    conn.close()
     if not rows:
         print ("Card denied!")
         PlayAccessDenied()
@@ -57,14 +55,13 @@ def getCardPermission(cardid):
         return True
 
 
-def startListening():
-    while 1:
-        id, text = reader.read()
-        print("----------------")
-        print(f"Read card with ID: {id}")
-        
-        with conn:
-            print("Searching for userdata in database:")
-            if (getCardPermission(id)):
-                switch.enableAllPorts()
-        time.sleep(1.5)
+def listenForCard():
+    print ("Searching for signal")
+    id, text = reader.read()
+    print("----------------")
+    print(f"Read card with ID: {id}")
+    
+    print("Searching for userdata in database:")
+    if (getCardPermission(id)):
+        switch.enableAllPorts()
+    time.sleep(1.5)
