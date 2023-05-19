@@ -1,6 +1,5 @@
 import os, configparser
 from netmiko import ConnectHandler
-from rich import *
 
 #Config
 config = configparser.ConfigParser()
